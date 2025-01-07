@@ -10,10 +10,10 @@
 # -*- coding: utf-8 -*-
 import urllib2
 
-def fetch_page(page=1):
+def fetch_page():
     """抓取單一頁面的資料"""
     try:
-        url = "https://24h.pchome.com.tw/store/DSAA31/prod?page=" + str(page)
+        url = "http://localhost:4200/"
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
@@ -21,12 +21,12 @@ def fetch_page(page=1):
         response = urllib2.urlopen(req)
         return response.read()
     except Exception as e:
-        print("Error fetching page " + str(page) + ": " + str(e))
+        print("Error fetching page " + str(e))
         return None
 
 def main():
     # 測試抓取第一頁
-    data = fetch_page(1)
+    data = fetch_page()
     if data:
         print("Successfully fetched page 1")
         print(data[:200])  # 只印出前 200 個字元來看看結果
