@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# import urllib.request
-# import urllib.parse
 # import json
 # import math
 # from typing import List, Dict, Any
@@ -8,7 +6,10 @@
 
 # Task 1: 爬取所有商品資料
 # -*- coding: utf-8 -*-
-import urllib2
+# import urllib2
+
+import urllib.request
+import urllib.error
 
 def fetch_page():
     """抓取單一頁面的資料"""
@@ -21,12 +22,22 @@ def fetch_page():
             'Connection': 'keep-alive',
             'Host': '24h.pchome.com.tw'
         }
-        req = urllib2.Request(url, headers=headers)
-        response = urllib2.urlopen(req)
-        return response.read()
+
+        # 建立請求物件
+        req = urllib.request.Request(url, headers=headers)
+        
+        # 發送請求並接收回應
+        with urllib.request.urlopen(req) as response:
+            return response.read()
+
+    except urllib.error.HTTPError as e:
+        print(f"HTTP error occurred: {e.code} {e.reason}")
+    except urllib.error.URLError as e:
+        print(f"URL error occurred: {e.reason}")
     except Exception as e:
-        print("Error fetching page " + str(e))
-        return None
+        print(f"An unexpected error occurred: {str(e)}")
+
+    return None
 
 def main():
     # 測試抓取第一頁
