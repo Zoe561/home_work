@@ -1,55 +1,102 @@
-# -*- coding: utf-8 -*-
-# import json
-# import math
-# from typing import List, Dict, Any
-
-
 # Task 1: 爬取所有商品資料
 # -*- coding: utf-8 -*-
 # import urllib2
 
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import urllib.request
 import urllib.error
+import json
+import sys
 
-def fetch_page():
-    """抓取單一頁面的資料"""
-    try:
-        url = "https://24h.pchome.com.tw/store/DSAA31"
-        headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
+def fetch_products(page=1, page_count=40):
+    """
+    呼叫 PChome API，抓取指定頁碼的商品資料 (回傳 JSON)。
+    page_count 預設 40，每頁抓多少可自行調整。
+    回傳 Python dict，若抓不到則回傳 None。
+    """
+    base_url = (
+        "https://ecshweb.pchome.com.tw/search/v4.3/all/results"
+        "?cateid=DSAA31&attr=&pageCount={}&page={}"
+    )
+    url = base_url.format(page_count, page)
+
+    # 設定 headers，模擬一般瀏覽器請求
+    headers = {
+            # 'Accept': '*/*',
+            # 'Accept-Encoding': 'gzip, deflate, br, zstd',
+            # 'Method': 'GET',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            'Connection': 'keep-alive',
-            'Host': '24h.pchome.com.tw'
-        }
+            # 'Connection': 'keep-alive',
+            # 'referer': 'https://24h.pchome.com.tw/',
+            }
+    
+    # 建立請求物件
+    req = urllib.request.Request(url, headers=headers)
 
-        # 建立請求物件
-        req = urllib.request.Request(url, headers=headers)
-        
-        # 發送請求並接收回應
+    try:
         with urllib.request.urlopen(req) as response:
-            return response.read()
-
+            # 讀取回傳資料 (可能是 gzip 壓縮)
+            raw_data = response.read()
+            encoding = response.info().get("Content-Encoding")
+            if encoding == "gzip":
+                import gzip
+                raw_data = gzip.decompress(raw_data)
+            
+            # 將 JSON 文字轉為 Python dict
+            data_dict = json.loads(raw_data.decode("utf-8", errors="ignore"))
+            return data_dict
     except urllib.error.HTTPError as e:
-        print(f"HTTP error occurred: {e.code} {e.reason}")
+        print(f"[HTTP Error] {e.code}: {e.reason}", file=sys.stderr)
     except urllib.error.URLError as e:
-        print(f"URL error occurred: {e.reason}")
+        print(f"[URL Error] {e.reason}", file=sys.stderr)
     except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
-
+        print(f"[Error] {str(e)}", file=sys.stderr)
+    
     return None
 
 def main():
-    # 測試抓取第一頁
-    data = fetch_page()
-    if data:
-        print("Successfully fetched page 1")
-        print(data[:200])  # 只印出前 200 個字元來看看結果
-    else:
-        print("Failed to fetch data")
+    all_product_ids = set()
+    page = 1
+    page_count = 40
+
+    while True:
+        print(f"Fetching page {page} ...", file=sys.stderr)
+        data_dict = fetch_products(page=page, page_count=page_count)
+        
+        if not data_dict:
+            # 如果抓不到資料(回傳 None)，就結束
+            break
+
+        prods = data_dict.get("Prods", [])
+        if not prods:
+            # 沒有商品時，結束
+            break
+        
+        # 擷取商品 Id
+        for item in prods:
+            pid = item.get("Id")
+            if pid:
+                all_product_ids.add(pid)
+        
+        # 若本頁抓到的商品數量 < page_count，表示可能已到最後一頁
+        if len(prods) < page_count:
+            break
+        
+        page += 1  # 下一頁
+
+    # 輸出到 products.txt
+    with open("products.txt", "w", encoding="utf-8") as f:
+        for pid in sorted(all_product_ids):
+            f.write(pid + "\n")
+    
+    print(f"Done! Total product IDs: {len(all_product_ids)}")
+    print("All product IDs have been saved to 'products.txt'.")
 
 if __name__ == "__main__":
     main()
+
 
 # # Task 2: 篩選高評價商品
 # def get_best_products(products: List[Dict[str, Any]]) -> List[str]:
