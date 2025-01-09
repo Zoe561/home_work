@@ -1,7 +1,3 @@
-# Task 1: 爬取所有商品資料
-# -*- coding: utf-8 -*-
-# import urllib2
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -9,42 +5,33 @@ import urllib.request
 import urllib.error
 import json
 import sys
+import gzip
+import math
 
 def fetch_products(page=1, page_count=40):
-    """
-    呼叫 PChome API，抓取指定頁碼的商品資料 (回傳 JSON)。
-    page_count 預設 40，每頁抓多少可自行調整。
-    回傳 Python dict，若抓不到則回傳 None。
-    """
+
     base_url = (
         "https://ecshweb.pchome.com.tw/search/v4.3/all/results"
         "?cateid=DSAA31&attr=&pageCount={}&page={}"
     )
     url = base_url.format(page_count, page)
 
-    # 設定 headers，模擬一般瀏覽器請求
     headers = {
-            # 'Accept': '*/*',
-            # 'Accept-Encoding': 'gzip, deflate, br, zstd',
-            # 'Method': 'GET',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            # 'Connection': 'keep-alive',
-            # 'referer': 'https://24h.pchome.com.tw/',
-            }
-    
-    # 建立請求物件
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Encoding": "gzip, deflate, br",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Connection": "keep-alive",
+        "Referer": "https://24h.pchome.com.tw/"
+    }
+
     req = urllib.request.Request(url, headers=headers)
 
     try:
         with urllib.request.urlopen(req) as response:
-            # 讀取回傳資料 (可能是 gzip 壓縮)
             raw_data = response.read()
-            encoding = response.info().get("Content-Encoding")
-            if encoding == "gzip":
-                import gzip
+            if response.info().get("Content-Encoding") == "gzip":
                 raw_data = gzip.decompress(raw_data)
-            
-            # 將 JSON 文字轉為 Python dict
+
             data_dict = json.loads(raw_data.decode("utf-8", errors="ignore"))
             return data_dict
     except urllib.error.HTTPError as e:
@@ -53,127 +40,176 @@ def fetch_products(page=1, page_count=40):
         print(f"[URL Error] {e.reason}", file=sys.stderr)
     except Exception as e:
         print(f"[Error] {str(e)}", file=sys.stderr)
-    
+
     return None
 
-def main():
-    all_product_ids = set()
+
+def task1_fetch_all_products():
+    """
+    逐頁抓取 DSAA31 分類的商品，並回傳「所有商品」的列表。
+    另外也把商品 Id 寫入 products.txt (每行一個)。
+    回傳: List[Dict]，其中每個元素包含商品的關鍵資訊。
+    """
+    all_products = []
+    all_ids = []
     page = 1
     page_count = 40
 
     while True:
-        print(f"Fetching page {page} ...", file=sys.stderr)
-        data_dict = fetch_products(page=page, page_count=page_count)
-        
-        if not data_dict:
-            # 如果抓不到資料(回傳 None)，就結束
+        print(f"Fetching page {page}...", file=sys.stderr)
+        data = fetch_products(page=page, page_count=page_count)
+        if not data:
             break
 
-        prods = data_dict.get("Prods", [])
+        prods = data.get("Prods", [])
         if not prods:
-            # 沒有商品時，結束
             break
-        
-        # 擷取商品 Id
+
+        all_products.extend(prods)
+
+        # 收集商品 ID
         for item in prods:
             pid = item.get("Id")
             if pid:
-                all_product_ids.add(pid)
-        
-        # 若本頁抓到的商品數量 < page_count，表示可能已到最後一頁
-        if len(prods) < page_count:
-            break
-        
-        page += 1  # 下一頁
+                all_ids.append(pid)
 
-    # 輸出到 products.txt
+        if len(prods) < page_count:
+            # 商品數量少於 page_count，應該是最後一頁
+            break
+
+        page += 1
+
+    # 將所有商品 ID 寫入 products.txt
     with open("products.txt", "w", encoding="utf-8") as f:
-        for pid in sorted(all_product_ids):
+        for pid in all_ids:
             f.write(pid + "\n")
+
+    print(f"Task 1 done. Total products fetched: {len(all_products)}")
+    return all_products
+
+
+def task2_best_products(products):
+    """
+    根據 Task 1 抓到的 products (List[Dict])，
+    篩選出 reviewCount >= 1 & averageRating > 4.9 的商品，
+    將其 ID 寫入 best-products.txt (每行一個)。
+    """
+
     
-    print(f"Done! Total product IDs: {len(all_product_ids)}")
-    print("All product IDs have been saved to 'products.txt'.")
+    best_ids = []
+    for p in products:
+
+        review_count = p.get("reviewCount", 0)
+        rating_value = p.get("ratingValue", 0)
+        pid = p.get("Id", "")
+        if review_count is None:
+            review_count = 0
+
+        if rating_value is None:
+            rating_value = 0
+        
+        # 檢查是否符合條件
+        if review_count >= 1 and rating_value > 4.9:
+            best_ids.append(pid)
+
+    # 寫檔
+    with open("best-products.txt", "w", encoding="utf-8") as f:
+        for pid in best_ids:
+            f.write(pid + "\n")
+
+    print(f"Task 2 done. Found {len(best_ids)} products with ratingValue > 4.9 & reviewCount >= 1.")
+
+
+def task3_average_price_of_i5(products):
+    """
+    從 Task 1 的資料中，挑出商品名稱中含 'i5' 來判斷。
+    """
+    total_price = 0
+    count = 0
+
+    for p in products:
+        name = p.get("Name", "").lower()
+        price = p.get("Price", 0)
+
+        # 檢查商品名稱是否包含 'i5'
+        if "i5" in name:
+            total_price += price
+            count += 1
+
+    if count > 0:
+        avg_price = total_price / count
+        print(f"Task 3: The average price of ASUS PCs with Intel i5 is: {avg_price:.2f}")
+    else:
+        print("Task 3: No ASUS i5 products found, can't calculate average price.")
+
+def task4_standardize_prices(products):
+    """
+    Task 4:
+    使用 z-score 來標準化所有 ASUS PC 價格 (視整個 products 為母體)。
+    1. 計算母體平均 (mu) 和 母體標準差 (sigma)。
+    2. 逐一計算 z-score = (price - mu) / sigma。
+    3. 將結果寫入 standardization.csv，格式:
+       ProductID,Price,PriceZScore
+    """
+    # 先收集所有有價格的商品 (price 不為 None)，順便記下 ProductID
+    valid_items = []
+    for p in products:
+        pid = p.get("Id")
+        price = p.get("Price")
+        # 只收錄確實有價格的商品
+        if pid and isinstance(price, (int, float)):
+            valid_items.append((pid, price))
+
+    if not valid_items:
+        print("Task 4: No valid price data to calculate Z-Score.")
+        return
+
+    # 取出所有價格
+    prices = [item[1] for item in valid_items]
+
+    # 計算母體平均 mu
+    mu = sum(prices) / len(prices)
+
+    # 計算母體標準差 sigma
+    # population variance = sum((x - mu)^2) / N
+    # population stdev = sqrt(variance)
+    variance = sum((x - mu) ** 2 for x in prices) / len(prices)
+    sigma = math.sqrt(variance)
+
+    # 如果 sigma == 0，代表所有價格都相同，z-score 全部是 0
+    if sigma == 0:
+        print("Task 4: All prices are the same. Z-Score will be 0 for all.")
+        sigma = 1  # 避免除以 0
+
+    # 計算 z-score
+    z_data = []
+    for pid, price in valid_items:
+        z_score = (price - mu) / sigma
+        z_data.append((pid, price, z_score))
+
+    # 寫入 CSV
+    with open("standardization.csv", "w", encoding="utf-8") as f:
+        # 表頭
+        f.write("ProductID,Price,PriceZScore\n")
+        # 逐行寫入
+        for pid, price, z_score in z_data:
+            # 格式: ProductID,Price,PriceZScore
+            f.write(f"{pid},{price},{z_score:.5f}\n")
+
+    print(f"Task 4 done. Wrote {len(z_data)} lines to standardization.csv.")
+
+def main():
+    # Task 1: 抓取所有商品 (並輸出 products.txt)
+    products = task1_fetch_all_products()
+
+    # Task 2: 篩選高評分高評論商品 -> best-products.txt
+    task2_best_products(products)
+
+    # Task 3: 計算搭載 i5 處理器的平均售價 -> 直接印在 console
+    task3_average_price_of_i5(products)
+
+    # Task 4: 以整個 products 為母體，計算價格 z-score -> standardization.csv
+    task4_standardize_prices(products)
 
 if __name__ == "__main__":
     main()
-
-
-# # Task 2: 篩選高評價商品
-# def get_best_products(products: List[Dict[str, Any]]) -> List[str]:
-#     """
-#     篩選出評分高於4.9且至少有1則評論的商品
-#     Args:
-#         products: 商品資料列表
-#     Returns:
-#         List[str]: 符合條件的商品ID列表
-#     """
-#     # TODO: 實作篩選邏輯
-#     return []
-
-# # Task 3: 計算特定商品平均價格
-# def calculate_i5_average_price(products: List[Dict[str, Any]]) -> float:
-#     """
-#     計算Intel i5處理器電腦的平均價格
-#     Args:
-#         products: 商品資料列表
-#     Returns:
-#         float: 平均價格
-#     """
-#     # TODO: 實作計算邏輯
-#     return 0.0
-
-# # Task 4: 計算價格Z分數
-# def calculate_price_z_scores(products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-#     """
-#     計算所有商品價格的Z分數
-#     Args:
-#         products: 商品資料列表
-#     Returns:
-#         List[Dict]: 包含商品ID、價格和Z分數的列表
-#     """
-#     # TODO: 實作Z分數計算邏輯
-#     return []
-
-# def write_to_file(filename: str, data: List[str]) -> None:
-#     """
-#     將資料寫入檔案
-#     Args:
-#         filename: 檔案名稱
-#         data: 要寫入的資料列表
-#     """
-#     with open(filename, 'w', encoding='utf-8') as f:
-#         for item in data:
-#             f.write(f"{item}\n")
-
-# def write_to_csv(filename: str, data: List[Dict[str, Any]]) -> None:
-#     """
-#     將資料寫入CSV檔案
-#     Args:
-#         filename: 檔案名稱
-#         data: 要寫入的資料列表
-#     """
-#     with open(filename, 'w', encoding='utf-8') as f:
-#         f.write("ProductID,Price,PriceZScore\n")
-#         for item in data:
-#             f.write(f"{item['id']},{item['price']},{item['z_score']}\n")
-
-# def main():
-#     # 執行Task 1: 爬取所有商品
-#     all_products = fetch_all_products()
-#     product_ids = [p['id'] for p in all_products]
-#     write_to_file('products.txt', product_ids)
-
-#     # 執行Task 2: 篩選高評價商品
-#     best_products = get_best_products(all_products)
-#     write_to_file('best-products.txt', best_products)
-
-#     # 執行Task 3: 計算i5處理器平均價格
-#     i5_avg_price = calculate_i5_average_price(all_products)
-#     print(f"Average price of ASUS PCs with Intel i5 processor: {i5_avg_price}")
-
-#     # 執行Task 4: 計算價格Z分數
-#     z_scores = calculate_price_z_scores(all_products)
-#     write_to_csv('standardization.csv', z_scores)
-
-# if __name__ == "__main__":
-    # main()
