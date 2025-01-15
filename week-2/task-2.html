@@ -20,14 +20,14 @@
     #board {
       margin-top: 10px;
       border-collapse: collapse;
+      text-align: center;
     }
-    #board td {
+    #board th, #board td {
       width: 32px;
       height: 32px;
-      text-align: center;
-      vertical-align: middle;
       border: 1px solid #999;
       font-weight: bold;
+      vertical-align: middle;
     }
     #log {
       margin-top: 20px;
@@ -56,17 +56,17 @@
      * 1. 基本設定
      *************************************************/
     const minX = -15, maxX = 25;
-    const minY = -10,  maxY = 15;
-    const totalCols = maxX - minX + 1; // 21
-    const totalRows = maxY - minY + 1; // 11
+    const minY = -10, maxY = 15;
+    // 原先的 totalRows / totalCols 只表示「可放敵人」的區域高度與寬度
+    const totalCols = maxX - minX + 1; 
+    const totalRows = maxY - minY + 1; 
+
     let currentTurn = 0;
     let maxTurns = 10;
     let gameInterval = null;
 
     // 將 (x, y) 座標轉換成表格中的 (row, col)
-    // row 從上到下，col 從左到右
-    // 例如 y = 5 => rowIndex = 0,   x = -10 => colIndex = 0
-    //      y = -5 => rowIndex = 10, x = 10  => colIndex = 20
+    // 這裡先不加 +1，因為要在 updateBoard() 再處理
     function getRowCol(x, y) {
       const row = maxY - y;   // maxY 在最上面
       const col = x - minX;   // minX 在最左邊
@@ -201,55 +201,93 @@
     let game = null;
 
     /*************************************************
-     * 4. 產生格子地圖，並在每個回合更新
+     * 4. 產生格子地圖（含 X, Y 軸），並在每個回合更新
      *************************************************/
     function createBoard() {
       const board = document.getElementById('board');
       board.innerHTML = ''; // 先清空
 
-      // 建立 rows x cols 的表格
-      for (let r = 0; r < totalRows; r++) {
+      // 第一列: 左上角放 "y\\x" (只是個文字表示)，然後填上所有 X
+      const topRow = document.createElement('tr');
+      // 左上角空白
+      const cornerCell = document.createElement('th');
+      cornerCell.innerText = "y\\x";
+      topRow.appendChild(cornerCell);
+
+      // 依序建立 X 軸標頭
+      for (let x = minX; x <= maxX; x++) {
+        const th = document.createElement('th');
+        th.innerText = x;
+        topRow.appendChild(th);
+      }
+      board.appendChild(topRow);
+
+      // 接下來建立每一列 (對應 Y 軸從 maxY 遞減到 minY)
+      for (let y = maxY; y >= minY; y--) {
         const tr = document.createElement('tr');
-        for (let c = 0; c < totalCols; c++) {
+
+        // 左邊第一欄，顯示當前 Y
+        const yLabelCell = document.createElement('th');
+        yLabelCell.innerText = y;
+        tr.appendChild(yLabelCell);
+
+        // 此列底下的每一個「真正可放敵人或塔」的格子
+        for (let x = minX; x <= maxX; x++) {
           const td = document.createElement('td');
-          td.innerText = '.';  // 預設顯示一個「.」
+          td.innerText = '.';
           tr.appendChild(td);
         }
         board.appendChild(tr);
       }
     }
 
-    // 將敵人、塔等標記到格子上
+    // 因為上面 createBoard 多了一行一列作標頭，
+    // 所以更新內容時，需要 +1 的 offset。
     function updateBoard() {
-      // 先把整個表格都重置成 "."
       const board = document.getElementById('board');
-      for (let r = 0; r < totalRows; r++) {
+
+      // 先把表格裡的地形 (.) 與背景色重置
+      // 注意: row 從 1 ~ totalRows，col 從 1 ~ totalCols
+      for (let r = 1; r <= totalRows; r++) {
         const row = board.rows[r];
-        for (let c = 0; c < totalCols; c++) {
-          row.cells[c].innerText = '.';
+        for (let c = 1; c <= totalCols; c++) {
+          const cell = row.cells[c];
+          cell.innerText = '.';
+          cell.style.backgroundColor = ''; // 清空背景色
         }
       }
 
       // 標記防禦塔 (T or A)
       [...game.basicTowers, ...game.advancedTowers].forEach(tower => {
         const { row, col } = getRowCol(tower.position.x, tower.position.y);
-        if (row >= 0 && row < totalRows && col >= 0 && col < totalCols) {
-          // 進階塔 A，普通塔 T
-          const isAdvanced = game.advancedTowers.includes(tower);
-          board.rows[row].cells[col].innerText = isAdvanced ? tower.label : tower.label;
+        // 要加 offset +1
+        const rowIndex = row + 1;
+        const colIndex = col + 1;
+
+        // 確保在範圍內
+        if (rowIndex >= 1 && rowIndex <= totalRows &&
+            colIndex >= 1 && colIndex <= totalCols) {
+          board.rows[rowIndex].cells[colIndex].innerText = tower.label;
+          // 如果想也讓塔有特別色，可自行加 cell.style.backgroundColor
         }
       });
 
-      // 標記敵人 (E)
+      // 標記敵人 (E or X) + 紅色系背景
       game.enemies.forEach(enemy => {
         const { row, col } = getRowCol(enemy.position.x, enemy.position.y);
-        if (row >= 0 && row < totalRows && col >= 0 && col < totalCols) {
-          // 如果活著就顯示 enemy.label，例如 E1
-          // 如果死了就顯示另外的符號
-          board.rows[row].cells[col].innerText = enemy.isDead ? 'X' : enemy.label;
+        // 要加 offset +1
+        const rowIndex = row + 1;
+        const colIndex = col + 1;
+
+        if (rowIndex >= 1 && rowIndex <= totalRows &&
+            colIndex >= 1 && colIndex <= totalCols) {
+          // 若已死亡，用 'X' 表示；否則顯示原始 label
+          const cell = board.rows[rowIndex].cells[colIndex];
+          cell.innerText = enemy.isDead ? 'X' : enemy.label;
+          // 紅色系背景
+          cell.style.backgroundColor = 'salmon';
         }
       });
-      
     }
 
     /*************************************************
@@ -278,6 +316,7 @@
         currentTurn++;
         game.runTurn(currentTurn);
         updateBoard();
+
         if (currentTurn >= maxTurns) {
           clearInterval(gameInterval);
           logMessage("\nGame Over!");
@@ -291,7 +330,7 @@
       }, 1000);
     }
 
-    // 進入網頁時，先建立一次空白地圖
+    // 進入網頁時，先建立一次空白地圖（含軸標）
     window.onload = () => {
       createBoard();
     };
