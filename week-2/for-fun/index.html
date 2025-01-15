@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>簡易防禦塔格狀小遊戲 - 無第三方套件</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    #board {
+      border-collapse: collapse;
+    }
+    #board td {
+      width: 32px;
+      height: 32px;
+      text-align: center;
+      vertical-align: middle;
+      border: 1px solid #999;
+    }
+    #log {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      white-space: pre-wrap;
+      background-color: #f9f9f9;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>簡易防禦塔格狀小遊戲 - 無第三方套件</h1>
+  <div>
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="runTurn()">Run Turn</button>
+    <!-- <button onclick="checkStatus()">Check Status</button> -->
+  </div>
+
+  <table id="board"></table>
+  <div id="log"></div>
+
+  <script>
+    const minX = -15, maxX = 25;
+    const minY = -10, maxY = 15;
+    const totalCols = maxX - minX + 1;
+    const totalRows = maxY - minY + 1;
+
+    function createBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      for (let r = 0; r < totalRows; r++) {
+        const tr = document.createElement('tr');
+        for (let c = 0; c < totalCols; c++) {
+          const td = document.createElement('td');
+          td.innerText = '.';
+          tr.appendChild(td);
+        }
+        board.appendChild(tr);
+      }
+    }
+
+    function getRowCol(x, y) {
+      const row = maxY - y;
+      const col = x - minX;
+      return {row, col};
+    }
+
+    function logMessage(msg) {
+      const logDiv = document.getElementById('log');
+      logDiv.innerText += msg + "\n";
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function updateBoard(gameState) {
+      createBoard(); // 清空地圖重新繪製
+
+      const board = document.getElementById('board');
+      // 標記防禦塔
+      [...gameState.basicTowers, ...gameState.advancedTowers].forEach(tower => {
+        const { row, col } = getRowCol(tower.x, tower.y);
+        if (row >= 0 && row < totalRows && col >= 0 && col < totalCols) {
+          board.rows[row].cells[col].innerText = tower.label;
+        }
+      });
+      // 標記敵人
+      gameState.enemies.forEach(enemy => {
+        const { row, col } = getRowCol(enemy.x, enemy.y);
+        if (row >= 0 && row < totalRows && col >= 0 && col < totalCols) {
+          board.rows[row].cells[col].innerText = enemy.is_dead ? 'X' : enemy.label;
+          board.rows[row].cells[col].style.backgroundColor = 'salmon';
+        }
+      });
+
+      logMessage(`Turn: ${gameState.turn} / ${gameState.max_turns}`);
+      gameState.enemies.forEach(e => {
+        logMessage(`${e.label} at (${e.x}, ${e.y}), HP: ${e.life_points}, Dead: ${e.is_dead}`);
+      });
+    }
+
+    // 1. Start Game
+    function startGame() {
+      document.getElementById('log').innerText = "";
+      fetch("http://127.0.0.1:5000/start", { method: "POST" })
+      .then(res => res.json())
+      .then(data => {
+        if (data.gameState) {
+          updateBoard(data.gameState);
+          logMessage("Game Started!");
+        } else {
+          logMessage("Error starting game: " + JSON.stringify(data));
+        }
+      })
+      .catch(err => console.error(err));
+    }
+
+    // 2. Run Turn
+    function runTurn() {
+      fetch("http://127.0.0.1:5000/runTurn", { method: "POST" })
+      .then(res => res.json())
+      .then(data => {
+        if (data.gameState) {
+          updateBoard(data.gameState);
+          logMessage(data.message);
+          if (data.gameState.turn >= data.gameState.max_turns) {
+            logMessage("Game Over!");
+          }
+        } else {
+          logMessage("Error running turn: " + JSON.stringify(data));
+        }
+      })
+      .catch(err => console.error(err));
+    }
+
+    // 3. Check Status
+    function checkStatus() {
+      fetch("http://127.0.0.1:5000/status")
+      .then(res => res.json())
+      .then(data => {
+        if (data.gameState) {
+          updateBoard(data.gameState);
+          logMessage("Checked current status.");
+        } else {
+          logMessage("Error getting status: " + JSON.stringify(data));
+        }
+      })
+      .catch(err => console.error(err));
+    }
+
+    window.onload = () => {
+      createBoard();
+    }
+  </script>
+</body>
+</html>
