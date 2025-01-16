@@ -48,7 +48,6 @@ class Circle:
 class Polygon:
     def __init__(self, points):
         self.points = [Point(x, y) for x, y in points]
-    
     def perimeter(self):
         total = 0
         n = len(self.points)
@@ -67,7 +66,7 @@ line_c = Line((-1, 6), (-4, -4))
 circle_a = Circle((6, 3), 2)
 circle_b = Circle((8, 1), 1)
 
-polygon_a = Polygon([(2, 0), (5, -1), (-1, -2), (4, -4)])
+polygon_a = Polygon([(2, 0), (5, -1), (4, -4), (-1, -2)])
 
 # 執行計算並輸出結果
 print("Are Line A and Line B parallel? ", line_a.is_parallel(line_b)) # Line A 和 Line B 是否平行？
