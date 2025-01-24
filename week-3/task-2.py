@@ -32,3 +32,5 @@ for inputs in test_inputs:
     outputs = nn.forward(inputs)
     print(f"輸入 (X₁,X₂) = {tuple(inputs)} 的輸出結果:")
     print(f"O₁ = {outputs[0]:.4f}, O₂ = {outputs[1]:.4f}\n")
+    
+# TODO: 待優化

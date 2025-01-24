@@ -35,8 +35,15 @@ class Network:
         return self.sigmoid(output[0])
 
 nn = Network()
-outputs = nn.forward([1.5, 0.5])
-print(outputs)
+test_inputs = [[1.5, 0.5], [0, 1]]
 
-outputs = nn.forward([0, 1])
-print(outputs)
+for inputs in test_inputs:
+    outputs = nn.forward(inputs)
+    print(f"輸入 (X₁,X₂) = {tuple(inputs)} 的輸出結果:")
+    print(f"O₁ = {outputs:.4f}\n")
+
+# outputs = nn.forward([1.5, 0.5])
+# print(outputs)
+
+# outputs = nn.forward([0, 1])
+# print(outputs)
