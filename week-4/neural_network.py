@@ -191,34 +191,40 @@ if __name__ == "__main__":
     loss_bin2 = binary_cross_entropy(outputs_bin2, expects_bin2)
     print("Total Loss", loss_bin2)
 
-    # ============ [範例3] 多分類 (Multi-Class) ============
-    print("\n=== 多分類 (Multi-Class) ===")
-    # 假設有 3 類 => output_size=3, output_activation='softmax'
-    nn_mc = Network(output_size=3, output_activation='softmax', w_o=[[0.8,-0.4,0.6],[0.5,0.4,0.5],[0.3,0.75,-0.5]])
+
+    # ============ [範例3] 多標籤 (Multi-Label) ============
+    print("\n=== 多標籤 (Multi-Label) ===")
+    # 假設有 3 類 => output_size=3, output_activation='sigmoid'
+    nn_mc = Network(output_size=3, output_activation='sigmoid', w_o=[[0.8,-0.4,0.6],[0.5,0.4,0.5],[0.3,0.75,-0.5]])
     # forward
     outputs_mc1 = nn_mc.forward(1.5, 0.5)
     # 假設期望
     expects_mc1 = [1, 0, 1]
-    loss_mc1 = categorical_cross_entropy(outputs_mc1, expects_mc1)
-    # print("Outputs (softmax):", outputs_mc, "CCE Loss:", loss_mc)
+    loss_mc1 = binary_cross_entropy(outputs_mc1, expects_mc1)
     print("Total Loss", loss_mc1)
 
     # forward
     outputs_mc2 = nn_mc.forward(0, 1)
     # 假設期望
     expects_mc2 = [1, 1, 0]
-    loss_mc2 = categorical_cross_entropy(outputs_mc2, expects_mc2)
+    loss_mc2 = binary_cross_entropy(outputs_mc2, expects_mc2)
     print("Total Loss", loss_mc2)
-
-    # ============ [範例4] 多標籤 (Multi-Label) ============
-    print("\n=== 多標籤 (Multi-Label) ===")
-    # 假設有 3 個標籤 => output_size=3, output_activation='sigmoid'
-    nn_ml = Network(output_size=3, output_activation='sigmoid', w_o=[[0.8,-0.4,0.6],[0.5,0.4,0.5],[0.3,0.75,-0.5]])
+    
+    # ============ [範例4] 多分類 (Multi-Class) ============
+    print("\n=== 多分類 (Multi-Class) ===")
+    # 假設有 3 個標籤 => output_size=3, output_activation='softmax'
+    nn_ml = Network(output_size=3, output_activation='softmax', w_o=[[0.8,-0.4,0.6],[0.5,0.4,0.5],[0.3,0.75,-0.5]])
     # forward
-    outputs_ml = nn_ml.forward(0, 1)
-    # 假設期望標籤: (1, 0, 1)
-    expects_ml = [1, 0, 1]
-    loss_ml = binary_cross_entropy(outputs_ml, expects_ml)
-    # print("Outputs (sigmoid):", outputs_ml, "Multi-Label BCE Loss:", loss_ml)
-    print("Total Loss", loss_ml)
+    outputs_ml1 = nn_ml.forward(1.5, 0.5)
+    # 期望標籤
+    expects_ml1 = [1, 0, 0]
+    loss_ml1 = categorical_cross_entropy(outputs_ml1, expects_ml1)
+    print("Total Loss", loss_ml1)
+
+    # forward
+    outputs_ml2 = nn_ml.forward(0, 1)
+    # 期望標籤
+    expects_ml2 = [0, 0, 1]
+    loss_ml2 = categorical_cross_entropy(outputs_ml2, expects_ml2)
+    print("Total Loss", loss_ml2)
 
