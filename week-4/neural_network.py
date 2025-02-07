@@ -194,19 +194,26 @@ if __name__ == "__main__":
     # ============ [範例3] 多分類 (Multi-Class) ============
     print("\n=== 多分類 (Multi-Class) ===")
     # 假設有 3 類 => output_size=3, output_activation='softmax'
-    nn_mc = Network(output_size=3, output_activation='softmax')
+    nn_mc = Network(output_size=3, output_activation='softmax', w_o=[[0.8,-0.4,0.6],[0.5,0.4,0.5],[0.3,0.75,-0.5]])
     # forward
-    outputs_mc = nn_mc.forward(1.5, 0.5)
-    # 假設期望: 類別為第 0 類 => One-hot=[1, 0, 0]
-    expects_mc = [1, 0, 0]
-    loss_mc = categorical_cross_entropy(outputs_mc, expects_mc)
+    outputs_mc1 = nn_mc.forward(1.5, 0.5)
+    # 假設期望
+    expects_mc1 = [1, 0, 1]
+    loss_mc1 = categorical_cross_entropy(outputs_mc1, expects_mc1)
     # print("Outputs (softmax):", outputs_mc, "CCE Loss:", loss_mc)
-    print("Total Loss", loss_mc)
+    print("Total Loss", loss_mc1)
+
+    # forward
+    outputs_mc2 = nn_mc.forward(0, 1)
+    # 假設期望
+    expects_mc2 = [1, 1, 0]
+    loss_mc2 = categorical_cross_entropy(outputs_mc2, expects_mc2)
+    print("Total Loss", loss_mc2)
 
     # ============ [範例4] 多標籤 (Multi-Label) ============
     print("\n=== 多標籤 (Multi-Label) ===")
     # 假設有 3 個標籤 => output_size=3, output_activation='sigmoid'
-    nn_ml = Network(output_size=3, output_activation='sigmoid')
+    nn_ml = Network(output_size=3, output_activation='sigmoid', w_o=[[0.8,-0.4,0.6],[0.5,0.4,0.5],[0.3,0.75,-0.5]])
     # forward
     outputs_ml = nn_ml.forward(0, 1)
     # 假設期望標籤: (1, 0, 1)
