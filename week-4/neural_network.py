@@ -38,7 +38,7 @@ def mse_loss(outputs, expects):
     total = 0.0
     for i in range(len(outputs)):
         total += (expects[i] - outputs[i])**2
-    return total
+    return total / len(outputs)
 
 def binary_cross_entropy(outputs, expects):
     """
