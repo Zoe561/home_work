@@ -307,7 +307,6 @@ if __name__ == "__main__":
     print("\n=== [Task2] Neural Network for Binary Classification Tasks ===")
 
     # Task2-1:
-    # 這部分維持原始做法即可 (如您原先程式)
     nn_bin = Network(output_size=1, output_activation='sigmoid',
                      w_o=[[0.8, 0.4, -0.5]])  # 題目示例
 
