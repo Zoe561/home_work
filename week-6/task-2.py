@@ -122,13 +122,8 @@ def run_titanic_classification():
     for ep in range(epochs):
         for row in train_data:
             pclass, sex_val, age_val, fare_val, survived = row
-            outputs = nn.forward_train(pclass, sex_val)  # 但注意: 我們只有 forward 2 參數?
+            outputs = nn.forward_train(pclass, sex_val)  # 目前只有 forward 2 參數
             # ----
-            # !! 這裡要特別注意: 目前 Network 類別是兩個輸入 x1, x2
-            # 我們有4個輸入 => 需自行改 Network forward() 使其可處理多維輸入
-            # (題目給的簡易版只示範2 input)
-            # ----
-            # 暫時示範: 只放 pclass, sex_val(2維) => 準確度不會太高
             # 如果要4維, 要擴增 forward() 與權重
             # ----
             nn.backward([float(survived)], loss_type='bce')
