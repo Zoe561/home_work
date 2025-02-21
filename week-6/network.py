@@ -1,4 +1,5 @@
 import math
+import random
 
 # =========== Activation Functions ===========
 def relu(x):
@@ -40,9 +41,32 @@ class Network:
         self.hidden_activation = hidden_activation
         self.output_activation_type = output_activation
 
-        # Initialize weights
-        self.weights_h = w_h if w_h else [[0.5, 0.2, 0.3], [0.6, -0.6, 0.25]]
-        self.weights_o = w_o if w_o else [[0.8, -0.5, 0.6]]
+        # # Initialize weights
+        # self.weights_h = w_h if w_h else [[0.5, 0.2, 0.3], [0.6, -0.6, 0.25]]
+        # self.weights_o = w_o if w_o else [[0.8, -0.5, 0.6]]
+
+        # 使用 Xavier/Glorot 初始化
+        if w_h is None:
+            limit_h = math.sqrt(6 / (input_size + hidden_size))
+            print(f"\n隱藏層權重初始化範圍: [{-limit_h:.4f}, {limit_h:.4f}]")
+            self.weights_h = [[random.uniform(-limit_h, limit_h) for _ in range(input_size + 1)] 
+                        for _ in range(hidden_size)]
+            print("隱藏層初始權重值:")
+            for i, row in enumerate(self.weights_h):
+                print(f"神經元 {i + 1}: {[f'{w:.4f}' for w in row]}")
+        else:
+            self.weights_h = w_h
+
+        if w_o is None:
+            limit_o = math.sqrt(6 / (hidden_size + output_size))
+            print(f"\n輸出層權重初始化範圍: [{-limit_o:.4f}, {limit_o:.4f}]")
+            self.weights_o = [[random.uniform(-limit_o, limit_o) for _ in range(hidden_size + 1)]
+                            for _ in range(output_size)]
+            print("輸出層初始權重值:")
+            for i, row in enumerate(self.weights_o):
+                print(f"神經元 {i + 1}: {[f'{w:.4f}' for w in row]}")
+        else:
+            self.weights_o = w_o
 
         # Forward pass storage
         self.z_hidden = [0.0] * self.hidden_size
